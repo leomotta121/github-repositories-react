@@ -12,6 +12,7 @@ export default class Main extends Component {
     newRepo: '',
     repositories: [],
     loading: false,
+    error: false,
   };
 
   componentDidMount() {
@@ -31,30 +32,41 @@ export default class Main extends Component {
   }
 
   handleInputChange = e => {
-    this.setState({ newRepo: e.target.value });
+    this.setState({ newRepo: e.target.value, error: false });
   };
 
   handleSubmit = async e => {
-    e.preventDefault();
+    try {
+      e.preventDefault();
 
-    this.setState({ loading: true });
+      this.setState({ loading: true, error: false });
 
-    const { newRepo, repositories } = this.state;
+      const { newRepo, repositories } = this.state;
 
-    const response = await api.get(`/repos/${newRepo}`);
-    const data = {
-      name: response.data.full_name,
-    };
+      const response = await api.get(`/repos/${newRepo}`);
 
-    this.setState({
-      repositories: [...repositories, data],
-      newRepo: '',
-      loading: false,
-    });
+      const data = {
+        name: response.data.full_name,
+      };
+
+      const hasRepo = repositories.find(repo => repo.name === newRepo);
+
+      if (hasRepo) {
+        throw new Error(`${data.name} already exists in the list!`);
+      }
+
+      this.setState({
+        repositories: [...repositories, data],
+        newRepo: '',
+        loading: false,
+      });
+    } catch (error) {
+      this.setState({ error: true, loading: false });
+    }
   };
 
   render() {
-    const { newRepo, loading, repositories } = this.state;
+    const { newRepo, loading, repositories, error } = this.state;
 
     return (
       <Container>
@@ -63,7 +75,7 @@ export default class Main extends Component {
           Repositórios
         </h1>
 
-        <Form onSubmit={this.handleSubmit}>
+        <Form onSubmit={this.handleSubmit} error={error}>
           <input
             type="text"
             placeholder="Adicionar repositório"
